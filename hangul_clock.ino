@@ -46,7 +46,6 @@ uint8_t ledCnt = 0;
 
 uint8_t effect = RAINBOW;
 uint8_t bufH = 255, bufM = 255;
-uint16_t effectTime = millis();
 uint16_t effectUpdateTime[NUM_OF_EFFECT];
 
 boolean pMenu, pUp, pDown, menu, up, down;
@@ -68,7 +67,7 @@ void setup() {
   strip.show();
 
   effectUpdateTime[RAINBOW] = 120;         //ms
-  effectUpdateTime[RAINBOW_CYCLE] = 120;   //0ms
+  effectUpdateTime[RAINBOW_CYCLE] = 120;   //ms
 
   pinMode(MENU_BTN, INPUT_PULLUP);
   pinMode(UP_BTN, INPUT_PULLUP);
@@ -91,7 +90,6 @@ void timeUpdate() {
   int d = now.day();
   RTC.adjust(DateTime(y, m, d, bufH, bufM, 0));
   bufH = bufM = 255;
-  effectTime = millis();
 }
 
 void selectConfig() {
@@ -112,7 +110,6 @@ void selectConfig() {
     case 2: setBright();  strip.setPixelColor(0, 0xFF9900); strip.show(); break;
     case 3: setHour();    strip.setPixelColor(0, 0x00FF00); strip.show(); break;
     case 4: setMinute();  strip.setPixelColor(0, 0x0000FF); strip.show(); break;
-    //case 5: setSecond();  strip.setPixelColor(0, 0xFF00FF); strip.show(); break;
   }
 
   pMenu = menu;
@@ -124,12 +121,10 @@ void setMode() {
   if (up && !pUp) {
     if (effect == NUM_OF_EFFECT - 1) effect = RAINBOW;
     else effect++;
-    effectTime = millis();
   }
   else if (down && !pDown) {
     if (effect == RAINBOW) effect = NUM_OF_EFFECT - 1;
     else effect--;
-    effectTime = millis();
   }
 }
 
@@ -232,10 +227,10 @@ void ledOn(uint8_t row, uint8_t col) {
 
 void showTime() {
   static uint8_t color[NUM_OF_EFFECT] = {};
+  static uint16_t effectTime = millis();
   static uint16_t timeSetBlinkTime = 0;
   static boolean state = false;
   for(uint16_t i=1; i<37; i++) strip.setPixelColor(i, 0);
-  //for (uint16_t i = 0; i < 37; i++) strip.setPixelColor(i, 0);
 
   unsigned long currTime = millis();
 
@@ -291,7 +286,6 @@ void showTime() {
       }
     }
 
-    //strip.setPixelColor(ledMatrix[leds[i].row][leds[i].col] - 1, leds[i].color);
     strip.setPixelColor(ledMatrix[leds[i].row][leds[i].col], leds[i].color);
   }
 
