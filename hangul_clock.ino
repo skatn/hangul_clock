@@ -48,7 +48,6 @@ Led leds[37];
 uint8_t ledCnt = 0;
 
 uint8_t effect = RAINBOW;
-uint8_t changeHour = 255, changeMinute = 255;
 uint16_t effectUpdateTime[EFFECT_COUNT];
 
 boolean pMenu, pUp, pDown, menu, up, down, timeChanged;
