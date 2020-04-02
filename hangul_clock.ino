@@ -1,12 +1,13 @@
 #include <Adafruit_NeoPixel.h>
-#include <Wire.h>
-#include <RTClib.h>
+#include "RTClib.h"
 
 #define MENU_BTN    7
 #define UP_BTN      8
 #define DOWN_BTN    9
 
-#define NEO         3
+#define NEO_PIN         3
+#define BRIGHTNESS_MIN  30
+#define BRIGHTNESS_MAX  255
 
 extern volatile unsigned long timer0_millis;
 
@@ -16,16 +17,18 @@ enum {
   RED,
   BLUE,
   GREEN,
+  YELLOW_GREEN,
   PURPLE,
   PINK,
   YELLOW,
   SKY,
   WHITE,
-  NUM_OF_EFFECT
+  EFFECT_COUNT
 };
 
-RTC_DS1307 RTC;
-Adafruit_NeoPixel strip = Adafruit_NeoPixel(37, NEO, NEO_GRB + NEO_KHZ800); //mode 1 + clock 36
+RTC_DS1307 rtc;
+DateTime nowTime;
+Adafruit_NeoPixel strip = Adafruit_NeoPixel(37, NEO_PIN, NEO_GRB + NEO_KHZ800); //mode 1 + clock 36
 uint8_t ledMatrix[6][6] = {
   6,  5,  4,  3,  2,  1,
   7,  8,  9,  10, 11, 12,
@@ -45,22 +48,20 @@ Led leds[37];
 uint8_t ledCnt = 0;
 
 uint8_t effect = RAINBOW;
-uint8_t bufH = 255, bufM = 255;
-uint16_t effectUpdateTime[NUM_OF_EFFECT];
+uint8_t changeHour = 255, changeMinute = 255;
+uint16_t effectUpdateTime[EFFECT_COUNT];
 
-boolean pMenu, pUp, pDown, menu, up, down;
+boolean pMenu, pUp, pDown, menu, up, down, timeChanged;
+typedef enum {
+  TIME_UPDATE, SET_MODE, SET_BRIGHT, SET_HOUR, SET_MINUTE, CONFIG_COUNT
+}Config;
+Config config = TIME_UPDATE;
 
 void setup() {
-  Serial.begin(9600);
-
-  Wire.begin();
-  if (!RTC.begin()) {
-   // while (1);
+  if (!rtc.begin()) {
+    while (1);
   }
-  if (!RTC.isrunning()) {
-    RTC.adjust(DateTime(__DATE__, __TIME__)); //연결된 PC 시간이랑 연동
-    //RTC.adjust(DateTime(2020, 1, 1, 10, 0));
-  }
+  //rtc.adjust(DateTime(__DATE__, __TIME__)); //연결된 PC 시간이랑 연동, 업로드시 주석해제후 1회 업로드한뒤 주석하고 다시 1회 업로드
 
   strip.begin();
   strip.setBrightness(180);               //min : 30    max : 255
@@ -83,33 +84,27 @@ void loop() {
 }
 
 void timeUpdate() {
-  if (bufM > 250) return;
-  DateTime now = RTC.now();
-  int y = now.year();
-  int m = now.month();
-  int d = now.day();
-  RTC.adjust(DateTime(y, m, d, bufH, bufM, 0));
-  bufH = bufM = 255;
+  if (timeChanged == false) return;
+  timeChanged = false;
+  rtc.adjust(DateTime(nowTime.year(), nowTime.month(), nowTime.day(), nowTime.hour(), nowTime.minute(), 0));
 }
 
 void selectConfig() {
-  static uint8_t select = 0;
-
   menu = !digitalRead(MENU_BTN);
   up = !digitalRead(UP_BTN);
   down = !digitalRead(DOWN_BTN);
   
   if (menu && !pMenu) {
-    select++;
-    if (select > 4)select = 0;
+    config = config+1;
+    if (config >= CONFIG_COUNT)config = TIME_UPDATE;
   }
 
-  switch (select) {
-    case 0: timeUpdate(); strip.setPixelColor(0, 0x000000); strip.show(); break;
-    case 1: setMode();    strip.setPixelColor(0, 0xFF0000); strip.show(); break;
-    case 2: setBright();  strip.setPixelColor(0, 0xFF9900); strip.show(); break;
-    case 3: setHour();    strip.setPixelColor(0, 0x00FF00); strip.show(); break;
-    case 4: setMinute();  strip.setPixelColor(0, 0x0000FF); strip.show(); break;
+  switch (config) {
+    case TIME_UPDATE: timeUpdate(); strip.setPixelColor(0, 0x000000); strip.show(); break;
+    case SET_MODE:    setMode();    strip.setPixelColor(0, 0xFF0000); strip.show(); break;
+    case SET_BRIGHT:  setBright();  strip.setPixelColor(0, 0xFF9900); strip.show(); break;
+    case SET_HOUR:    setHour();    strip.setPixelColor(0, 0x00FF00); strip.show(); break;
+    case SET_MINUTE:  setMinute();  strip.setPixelColor(0, 0x0000FF); strip.show(); break;
   }
 
   pMenu = menu;
@@ -119,11 +114,11 @@ void selectConfig() {
 
 void setMode() {
   if (up && !pUp) {
-    if (effect == NUM_OF_EFFECT - 1) effect = RAINBOW;
+    if (effect == EFFECT_COUNT - 1) effect = RAINBOW;
     else effect++;
   }
   else if (down && !pDown) {
-    if (effect == RAINBOW) effect = NUM_OF_EFFECT - 1;
+    if (effect == RAINBOW) effect = EFFECT_COUNT - 1;
     else effect--;
   }
 }
@@ -131,56 +126,47 @@ void setMode() {
 void setBright() {
   if (up && !pUp) {
     int brightness = strip.getBrightness() + 20;
-    if (brightness > 255) brightness = 255;
+    if (brightness > BRIGHTNESS_MAX) brightness = BRIGHTNESS_MAX;
     strip.setBrightness(brightness);
   }
   else if (down && !pDown) {
     int brightness = strip.getBrightness() - 20;
-    if (brightness < 30) brightness = 30;
+    if (brightness < BRIGHTNESS_MIN) brightness = BRIGHTNESS_MIN;
     strip.setBrightness(brightness);
   }
 }
 
 void setHour() {
-  if (bufH > 250) {
-    DateTime now = RTC.now();
-    bufH = now.hour();
-  }
-  
   if (up && !pUp) {
-    bufH++;
-    if (bufH > 24) bufH = 1;
+    timeChanged = true;
+    rtc.adjust(nowTime+TimeSpan(0, 1, 0, 0));
   }
   else if (down && !pDown) {
-    bufH--;
-    if (bufH < 1) bufH = 24;
+    timeChanged = true;
+    rtc.adjust(nowTime-TimeSpan(0, 1, 0, 0));
   }
 }
 
 void setMinute() {
-  if (bufM >250) {
-    DateTime now = RTC.now();
-    bufM = now.minute();
-  }
-
   if (up && !pUp) {
-    bufM++;
-    if (bufM > 59) bufM = 0;
+    timeChanged = true;
+    rtc.adjust(nowTime+TimeSpan(0, 0, 1, 0));
   }
   else if (down && !pDown) {
-    bufM--;
-    if (bufM < 0) bufM = 59;
+    timeChanged = true;
+    rtc.adjust(nowTime-TimeSpan(0, 0, 1, 0));
   }
 }
 
 void updateClock() {
-  DateTime now = RTC.now();
-  int hour = bufH > 250 ? now.hour() : bufH;
-  int minute = bufM > 250 ? now.minute() : bufM;
-  int minute10 = minute / 10;
-  int minute1 = minute % 10;
+  nowTime = rtc.now();
+  uint8_t hour = nowTime.hour()%24;
+  uint8_t minute = nowTime.minute();
+  uint8_t minute10 = minute / 10;
+  uint8_t minute1 = minute % 10;
 
   ledOn(3, 0);
+  if(hour==0)hour=24;
   if (hour < 13) {
     ledOn(4, 0);
   }
@@ -211,7 +197,6 @@ void updateClock() {
     if (minute10 > 1)ledOn(3, minute10 - 1);
   }
   if (minute1) {
-    //ledOn(4, 5);
     if (minute1 < 6)ledOn(4, minute1);
     else ledOn(5, minute1 - 5);
   }
@@ -226,28 +211,27 @@ void ledOn(uint8_t row, uint8_t col) {
 }
 
 void showTime() {
-  static uint8_t color[NUM_OF_EFFECT] = {};
-  static uint16_t effectTime = millis();
-  static uint16_t timeSetBlinkTime = 0;
-  static boolean state = false;
+  static uint8_t color[EFFECT_COUNT] = {};
+  static uint16_t effectTime = millis(), timeChangeBlinkTime = 0;
+  static boolean stripState = false;
   for(uint16_t i=1; i<37; i++) strip.setPixelColor(i, 0);
 
   unsigned long currTime = millis();
 
-  if (currTime - timeSetBlinkTime > 500) {
-    timeSetBlinkTime = currTime;
-    state = !state;
+  if (currTime - timeChangeBlinkTime > 500) {
+    timeChangeBlinkTime = currTime;
+    stripState = !stripState;
   }
 
   for (int i = 0; i < ledCnt; i++) {
-    if ((bufH < 250) || (bufM < 250)) {
-      if (bufM < 250) {
+    if ((config == SET_HOUR) || (config == SET_MINUTE)) {
+      if (config == SET_MINUTE) {
         if((leds[i].row < 3) || (leds[i].col < 1))leds[i].color = 0xFFFFFF;
-        else leds[i].color = state ? 0 : 0xFFFFFF;
+        else leds[i].color = stripState ? 0 : 0xFFFFFF;
       }
-      else if ((bufH < 250)) {
+      else if (config == SET_HOUR) {
         if(leds[i].row > 2) leds[i].color = 0xFFFFFF;
-        else leds[i].color = state ? 0 : 0xFFFFFF;
+        else leds[i].color = stripState ? 0 : 0xFFFFFF;
       }
     }
     else {
@@ -266,6 +250,9 @@ void showTime() {
           break;
         case GREEN:
           leds[i].color = 0x00FF00;
+          break;
+        case YELLOW_GREEN:
+          leds[i].color = 0x57A639;
           break;
         case PURPLE:
           //leds[i].color=0x0B00FF;   //원본
@@ -297,11 +284,11 @@ void showTime() {
   if ((currTime - effectTime) > effectUpdateTime[effect]) {
     effectTime = currTime;
     switch (effect) {
-      case RAINBOW: color[RAINBOW]++; break;
+      case RAINBOW:       color[RAINBOW]++; break;
       case RAINBOW_CYCLE: color[RAINBOW_CYCLE]++; if (color[RAINBOW_CYCLE] >= 256 * 5)color[RAINBOW_CYCLE] = 0; break;
     }
   }
-  if (currTime > 60000) timer0_millis = effectTime = timeSetBlinkTime = 0;
+  if (currTime > 60000) timer0_millis = effectTime = timeChangeBlinkTime = 0;
 }
 
 uint32_t wheel(uint8_t n) {
