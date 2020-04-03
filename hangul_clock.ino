@@ -138,22 +138,26 @@ void setBright() {
 void setHour() {
   if (up && !pUp) {
     timeChanged = true;
-    rtc.adjust(nowTime+TimeSpan(0, 1, 0, 0));
+    if(nowTime.hour()%24==23) rtc.adjust(nowTime-TimeSpan(0, 23, 0, 0));
+    else rtc.adjust(nowTime+TimeSpan(0, 1, 0, 0));
   }
   else if (down && !pDown) {
     timeChanged = true;
-    rtc.adjust(nowTime-TimeSpan(0, 1, 0, 0));
+    if(nowTime.hour()%24==0) rtc.adjust(nowTime+TimeSpan(0, 23, 0, 0));
+    else rtc.adjust(nowTime-TimeSpan(0, 1, 0, 0));
   }
 }
 
 void setMinute() {
   if (up && !pUp) {
     timeChanged = true;
-    rtc.adjust(nowTime+TimeSpan(0, 0, 1, 0));
+    if(nowTime.minute()==59) rtc.adjust(nowTime-TimeSpan(0, 0, 59, 0));
+    else rtc.adjust(nowTime+TimeSpan(0, 0, 1, 0));
   }
   else if (down && !pDown) {
     timeChanged = true;
-    rtc.adjust(nowTime-TimeSpan(0, 0, 1, 0));
+    if(nowTime.minute()==0) rtc.adjust(nowTime+TimeSpan(0, 0, 59, 0));
+    else rtc.adjust(nowTime-TimeSpan(0, 0, 1, 0));
   }
 }
 
@@ -164,17 +168,18 @@ void updateClock() {
   uint8_t minute10 = minute / 10;
   uint8_t minute1 = minute % 10;
 
-  ledOn(3, 0);
   if(hour==0)hour=24;
-  if (hour < 13) {
-    ledOn(4, 0);
-  }
-  else {
-    ledOn(5, 0);
-    hour -= 12;
+
+  if((nowTime.second() < 5) || ((config == SET_HOUR) || (config == SET_MINUTE))){
+    ledOn(3, 0);
+    if (hour < 13)
+      ledOn(4, 0);
+    else 
+      ledOn(5, 0);
   }
 
   ledOn(2, 5);
+  if(hour > 12) hour -= 12;
   switch (hour) {
     case 1:  ledOn(0, 0);              break;
     case 2:  ledOn(0, 1);              break;
