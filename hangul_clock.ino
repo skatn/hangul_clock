@@ -168,11 +168,9 @@ void updateClock() {
   uint8_t minute10 = minute / 10;
   uint8_t minute1 = minute % 10;
 
-  if(hour==0)hour=24;
-
   if((nowTime.second() < 5) || ((config == SET_HOUR) || (config == SET_MINUTE))){
     ledOn(3, 0);
-    if (hour < 13)
+    if (hour < 12)
       ledOn(4, 0);
     else 
       ledOn(5, 0);
@@ -192,6 +190,7 @@ void updateClock() {
     case 9:  ledOn(2, 0); ledOn(2, 1); break;
     case 10: ledOn(2, 2);              break;
     case 11: ledOn(2, 2); ledOn(2, 3); break;
+    case 0:
     case 12: ledOn(2, 2); ledOn(2, 4); break;
   }
 
