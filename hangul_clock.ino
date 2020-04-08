@@ -94,7 +94,7 @@ void selectConfig() {
   down = !digitalRead(DOWN_BTN);
   
   if (menu && !pMenu) {
-    config = config+1;
+    config = (Config)(config+1);
     if (config >= CONFIG_COUNT)config = TIME_UPDATE;
   }
 
