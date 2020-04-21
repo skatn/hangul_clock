@@ -1,5 +1,9 @@
 #include <Adafruit_NeoPixel.h>
+#include <EEPROM.h>
 #include "RTClib.h"
+
+#define BRIGHTNESS_ADDRESS  0
+#define EFFECT_ADDRESS      1
 
 #define MENU_BTN    7
 #define UP_BTN      8
@@ -11,25 +15,22 @@
 
 extern volatile unsigned long timer0_millis;
 
-enum {
-  RAINBOW,
-  RAINBOW_CYCLE,
-  RED,
-  BLUE,
-  GREEN,
-  YELLOW_GREEN,
-  PURPLE,
-  PINK,
-  YELLOW,
-  SKY,
-  WHITE,
-  EFFECT_COUNT
-};
+#define RAINBOW       0
+#define RED           1
+#define BLUE          2
+#define GREEN         3
+#define YELLOW_GREEN  4
+#define PURPLE        5
+#define PINK          6
+#define YELLOW        7
+#define SKY           8
+#define WHITE         9
+#define EFFECT_COUNT  10
 
 RTC_DS1307 rtc;
 DateTime nowTime;
 Adafruit_NeoPixel strip = Adafruit_NeoPixel(37, NEO_PIN, NEO_GRB + NEO_KHZ800); //mode 1 + clock 36
-uint8_t ledMatrix[6][6] = {
+const uint8_t ledMatrix[36] PROGMEM = {
   6,  5,  4,  3,  2,  1,
   7,  8,  9,  10, 11, 12,
   18, 17, 16, 15, 14, 13,
@@ -44,13 +45,15 @@ typedef struct _led {
   uint32_t color;
 } Led;
 
-Led leds[37];
+Led leds[10];
 uint8_t ledCnt = 0;
 
+#define effectUpdateTime 120
 uint8_t effect = RAINBOW;
-uint16_t effectUpdateTime[EFFECT_COUNT];
+int brightness = 180;
 
 boolean pMenu, pUp, pDown, menu, up, down, timeChanged;
+
 typedef enum {
   TIME_UPDATE, SET_MODE, SET_BRIGHT, SET_HOUR, SET_MINUTE, CONFIG_COUNT
 }Config;
@@ -61,13 +64,22 @@ void setup() {
     while (1);
   }
   //rtc.adjust(DateTime(__DATE__, __TIME__)); //연결된 PC 시간이랑 연동, 업로드시 주석해제후 1회 업로드한뒤 주석하고 다시 1회 업로드
+  
+  brightness = EEPROM.read(BRIGHTNESS_ADDRESS);
+  if(brightness < BRIGHTNESS_MIN){
+    brightness = BRIGHTNESS_MIN;
+    EEPROM.update(BRIGHTNESS_ADDRESS, brightness);
+  }
 
+  effect = EEPROM.read(EFFECT_ADDRESS);
+  if(effect >= EFFECT_COUNT){
+    effect = RAINBOW;
+    EEPROM.update(EFFECT_ADDRESS, effect);
+  }
+  
   strip.begin();
-  strip.setBrightness(180);               //min : 30    max : 255
+  strip.setBrightness(brightness);              //min : 30    max : 255
   strip.show();
-
-  effectUpdateTime[RAINBOW] = 120;         //ms
-  effectUpdateTime[RAINBOW_CYCLE] = 120;   //ms
 
   pinMode(MENU_BTN, INPUT_PULLUP);
   pinMode(UP_BTN, INPUT_PULLUP);
@@ -94,7 +106,7 @@ void selectConfig() {
   down = !digitalRead(DOWN_BTN);
   
   if (menu && !pMenu) {
-    config = config+1;
+    config = (Config)(config+1);
     if (config >= CONFIG_COUNT)config = TIME_UPDATE;
   }
 
@@ -115,23 +127,27 @@ void setMode() {
   if (up && !pUp) {
     if (effect == EFFECT_COUNT - 1) effect = RAINBOW;
     else effect++;
+    EEPROM.update(EFFECT_ADDRESS, effect);
   }
   else if (down && !pDown) {
     if (effect == RAINBOW) effect = EFFECT_COUNT - 1;
     else effect--;
+    EEPROM.update(EFFECT_ADDRESS, effect);
   }
 }
 
 void setBright() {
   if (up && !pUp) {
-    int brightness = strip.getBrightness() + 20;
+    brightness += 20;
     if (brightness > BRIGHTNESS_MAX) brightness = BRIGHTNESS_MAX;
     strip.setBrightness(brightness);
+    EEPROM.update(BRIGHTNESS_ADDRESS, brightness);
   }
   else if (down && !pDown) {
-    int brightness = strip.getBrightness() - 20;
+    brightness -= 20;
     if (brightness < BRIGHTNESS_MIN) brightness = BRIGHTNESS_MIN;
     strip.setBrightness(brightness);
+    EEPROM.update(BRIGHTNESS_ADDRESS, brightness);
   }
 }
 
@@ -214,19 +230,19 @@ void ledOn(uint8_t row, uint8_t col) {
 }
 
 void showTime() {
-  static uint8_t color[EFFECT_COUNT] = {};
+  static uint8_t color = 0;
   static uint16_t effectTime = millis(), timeChangeBlinkTime = 0;
   static boolean stripState = false;
-  for(uint16_t i=1; i<37; i++) strip.setPixelColor(i, 0);
+  for(uint8_t i=1; i<37; i++) strip.setPixelColor(i, 0);
 
-  unsigned long currTime = millis();
+  uint16_t currTime = millis();
 
   if (currTime - timeChangeBlinkTime > 500) {
     timeChangeBlinkTime = currTime;
     stripState = !stripState;
   }
 
-  for (int i = 0; i < ledCnt; i++) {
+  for (register uint8_t i = 0; i < ledCnt; i++) {
     if ((config == SET_HOUR) || (config == SET_MINUTE)) {
       if (config == SET_MINUTE) {
         if((leds[i].row < 3) || (leds[i].col < 1))leds[i].color = 0xFFFFFF;
@@ -239,57 +255,29 @@ void showTime() {
     }
     else {
       switch (effect) {
-        case RAINBOW:
-          leds[i].color = wheel(color[RAINBOW]);
-          break;
-        case RAINBOW_CYCLE:
-          leds[i].color = wheel(((i * 256 / ledCnt) + color[RAINBOW_CYCLE]) & 255);
-          break;
-        case RED:
-          leds[i].color = 0xFF0000;
-          break;
-        case BLUE:
-          leds[i].color = 0x0000FF;
-          break;
-        case GREEN:
-          leds[i].color = 0x00FF00;
-          break;
-        case YELLOW_GREEN:
-          leds[i].color = 0x57A639;
-          break;
-        case PURPLE:
-          //leds[i].color=0x0B00FF;   //원본
-          leds[i].color = 0x6F00CC; //25%어둡게
-          break;
-        case PINK:
-          leds[i].color = 0xFF3399;
-          break;
-        case YELLOW:
-          leds[i].color = 0xFF9900;
-          break;
-        case SKY:
-          leds[i].color = 0x00FFFF;
-          break;
-        case WHITE:
-          leds[i].color = 0xFFFFFF;
-          break;
+        case RAINBOW:       leds[i].color = wheel(color);         break;
+        case RED:           leds[i].color = 0xFF0000;             break;
+        case BLUE:          leds[i].color = 0x0000FF;             break;
+        case GREEN:         leds[i].color = 0x00FF00;             break;
+        case YELLOW_GREEN:  leds[i].color = 0x57A639;             break;
+        case PURPLE:        leds[i].color = 0x6F00CC;             break;
+        case PINK:          leds[i].color = 0xFF3399;             break;
+        case YELLOW:        leds[i].color = 0xFF9900;             break;
+        case SKY:           leds[i].color = 0x00FFFF;             break;
+        case WHITE:         leds[i].color = 0xFFFFFF;             break;
       }
     }
-
-    strip.setPixelColor(ledMatrix[leds[i].row][leds[i].col], leds[i].color);
+    strip.setPixelColor(pgm_read_byte(ledMatrix+leds[i].row*6+leds[i].col), leds[i].color);
   }
 
   strip.show();
-  for (int i = 0; i < ledCnt; i++) leds[i].row = leds[i].col = leds[i].color = 0;
+  for (uint8_t i = 0; i < ledCnt; i++) leds[i].row = leds[i].col = leds[i].color = 0;
   ledCnt = 0;
 
 
-  if ((currTime - effectTime) > effectUpdateTime[effect]) {
+  if ((currTime - effectTime) > effectUpdateTime) {
     effectTime = currTime;
-    switch (effect) {
-      case RAINBOW:       color[RAINBOW]++; break;
-      case RAINBOW_CYCLE: color[RAINBOW_CYCLE]++; if (color[RAINBOW_CYCLE] >= 256 * 5)color[RAINBOW_CYCLE] = 0; break;
-    }
+    color++;
   }
   if (currTime > 60000) timer0_millis = effectTime = timeChangeBlinkTime = 0;
 }
