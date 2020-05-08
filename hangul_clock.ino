@@ -10,7 +10,9 @@
 #define DOWN_BTN    9
 
 #define NEO_PIN         3
-#define BRIGHTNESS_MIN  30
+#define BRIGHTNESS_STEP 40
+#define DEFAULT_BRIGHTNESS 180
+#define BRIGHTNESS_MIN  10
 #define BRIGHTNESS_MAX  255
 
 extern volatile unsigned long timer0_millis;
@@ -67,7 +69,7 @@ void setup() {
   
   brightness = EEPROM.read(BRIGHTNESS_ADDRESS);
   if(brightness < BRIGHTNESS_MIN){
-    brightness = BRIGHTNESS_MIN;
+    brightness = DEFAULT_BRIGHTNESS;
     EEPROM.update(BRIGHTNESS_ADDRESS, brightness);
   }
 
@@ -138,13 +140,13 @@ void setMode() {
 
 void setBright() {
   if (up && !pUp) {
-    brightness += 20;
+    brightness += BRIGHTNESS_STEP;
     if (brightness > BRIGHTNESS_MAX) brightness = BRIGHTNESS_MAX;
     strip.setBrightness(brightness);
     EEPROM.update(BRIGHTNESS_ADDRESS, brightness);
   }
   else if (down && !pDown) {
-    brightness -= 20;
+    brightness -= BRIGHTNESS_STEP;
     if (brightness < BRIGHTNESS_MIN) brightness = BRIGHTNESS_MIN;
     strip.setBrightness(brightness);
     EEPROM.update(BRIGHTNESS_ADDRESS, brightness);
