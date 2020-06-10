@@ -10,9 +10,9 @@
 #define DOWN_BTN    9
 
 #define NEO_PIN         3
-#define BRIGHTNESS_STEP 40
+#define BRIGHTNESS_STEP 20
 #define DEFAULT_BRIGHTNESS 180
-#define BRIGHTNESS_MIN  10
+#define BRIGHTNESS_MIN  35
 #define BRIGHTNESS_MAX  255
 
 extern volatile unsigned long timer0_millis;
