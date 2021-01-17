@@ -33,14 +33,21 @@ byte pwmAddress[MAX][MAX]={             //led Control address = pinsAddress + 0x
   0x1A, 0x17, 0x14, 0x11, 0x0E, 0x0B,
   0x19, 0x16, 0x13, 0x12, 0x0F, 0x0C
 };
-int brightness = 255;
+int brightness = 127;
 
 void i2cInit(){
-  sendI2C(0x4B, 1);
+  Wire.begin(4, 5);
+  Wire.setClock(400000);
+  delay(1000);
+  
+  sendI2C(0x00, 1); 
+  sendI2C(0x4B, 1); //frequency setting  0: 3kHz / 1: 22kHz
+  sendI2C(0x4A, 0);
 }
 
 void sendI2C(int address, int data){
-  Wire.beginTransmission(address);
+  Wire.beginTransmission(0b00111100);
+  Wire.write(address);
   Wire.write(data);
   Wire.endTransmission(true);
 }
@@ -209,7 +216,6 @@ void setup() {
 
   ntpConnect();
   serverInit();
-  Wire.begin(4, 5);
   i2cInit();
 }
 
@@ -219,5 +225,5 @@ void loop() {
   }
 
   showDisplay(display);
-  delay(10);
+  delay(8);
 }
