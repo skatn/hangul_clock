@@ -6,8 +6,13 @@
 #include <ESPAsyncTCP.h>
 #include <ESPAsyncWebServer.h>
 #include <Wire.h>
+#include <EEPROM.h>
 
 #define DISPLAY_TYPE_HORIZONTAL
+
+#define EEPROM_SIZE 512
+#define EEPROM_ADDR_DISPLAYMODE 0
+#define EEPROM_ADDR_BRIGHTNESS  1
 
 #define TIME_CHANGE_NULL    0
 #define TIME_CHANGE_SECOND  1
@@ -53,6 +58,27 @@ byte PWM_Gamma64[64]={
 };
 byte brightness = 32;    //0~64
 byte displayMode = DISPLAY_MODE_STANDARD;
+
+void readSettings(){
+  EEPROM.begin(512);
+
+  displayMode = EEPROM.read(EEPROM_ADDR_DISPLAYMODE);
+  brightness = EEPROM.read(EEPROM_ADDR_BRIGHTNESS);
+  if(displayMode > 10) setDisplayMode(DISPLAY_MODE_STANDARD);
+  if(brightness > 64) setBrightness(64);
+}
+
+void setBrightness(int value){
+  brightness = value;
+  EEPROM.write(EEPROM_ADDR_BRIGHTNESS, value);
+  EEPROM.commit();
+}
+
+void setDisplayMode(int value){
+  displayMode = value;
+  EEPROM.write(EEPROM_ADDR_DISPLAYMODE, value);
+  EEPROM.commit();
+}
 
 void i2cInit(){
   Wire.begin(4, 5);
@@ -129,32 +155,26 @@ void serverInit(){
   // Send a GET request to <IP>/get?message=<message>
   server.on("/get", HTTP_GET, [] (AsyncWebServerRequest *request) {
     String message;
-    if(request->hasParam("set_bright_mode")){
-      //brightMode = request->getParam("set_bright_mode")->value().toInt();
+    if(request->hasParam("get_settings")){
+      message = String(displayMode);
+      message += "," + String(brightness);
+    }
+    else if(request->hasParam("set_display_mode")){
+      setDisplayMode(request->getParam("set_display_mode")->value().toInt());
+      message = "success";
+    }
+    else if(request->hasParam("set_brightness")){
+      setBrightness(request->getParam("set_brightness")->value().toInt());
       message = "success";
     }
     else {
       message = "No message sent";
+      Serial.println(message);
     }
-    
-    request->send(200, "text/plain", "Hello, GET: " + message);
-  });
-  
-  /*
-  // Send a POST request to <IP>/post with a form field message set to <message>
-  server.on("/post", HTTP_POST, [](AsyncWebServerRequest *request){
-    String message;
-    if(request->hasParam("set_bright_mode", true)){
-      //String data = request->getParam("set_bright_mode", true)->value();
-      brightMode = request->getParam("set_bright_mode", true)->value().toInt();
-      message = "success";
-    }
-    else {
-      message = "No message sent";
-    }
+
     request->send(200, "text/plain", message);
-  });*/
-  
+  });
+
   server.onNotFound([](AsyncWebServerRequest *request){
     request->send(404, "text/plain", "Not found");
   });
@@ -326,17 +346,23 @@ void setup() {
   ntpConnect();
   serverInit();
   i2cInit();
+  readSettings();
 }
 
 void loop() {
   delay(8);
   byte whichChanged = isTimeChanged();
   if(whichChanged == TIME_CHANGE_NULL) return;
-  Serial.println(whichChanged);
   updateDisplay();
-  
-  if(whichChanged == TIME_CHANGE_MINUTE && displayMode == DISPLAY_MODE_FADE){
-    fade();
+
+  switch(displayMode){
+    case DISPLAY_MODE_STANDARD:
+      break;
+    case DISPLAY_MODE_FADE:
+      if(whichChanged == TIME_CHANGE_MINUTE){
+        fade();
+      }
+      break;
   }
 
   showDisplay();
