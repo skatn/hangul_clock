@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hangul Clock</title>
+</head>
+<body>
+    <h1>한글시계 설정페이지</h1>
+    <button onclick="onClickGetSettings();">
+        세팅값 가져오기
+    </button>
+
+    <p>디스플레이 모드</p>
+    <span>현재 설정 모드 : </span><span id="display_mode">-</span>
+    <br>
+    <input type="radio" name="display_mode" value="0">기본
+    <input type="radio" name="display_mode" value="1">페이드
+    <button onclick="onClickSetDisplayMode();">설정</button>
+    <hr/>
+
+    <p>밝기</p>
+    <span>현재 설정 값 : </span><span id="brightness">-%</span>
+    <br>
+    <input type="range" id="slider" value="0" min="0" max="100" onchange="changeSlideValue(this.value)">
+    <span id="slide_value">0%</span>
+    <button onclick="onClickSetBrightness();">설정</button>
+    <hr/>
+
+    <script language = "javascript">
+        const brightness = document.getElementById("brightness");
+        const slider = document.getElementById("slider");
+        const slideValue = document.getElementById('slide_value');
+        const displayMode = document.getElementById('display_mode');
+        const displayRadios = document.getElementsByName("display_mode")
+
+        function onClickGetSettings(){
+            var xhttp = new XMLHttpRequest();
+            
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    // Typical action to be performed when the document is ready:
+                    console.log(xhttp.responseText);
+                    const split = xhttp.responseText.split(",");
+                    const display_mode = split[0];
+                    const brightness = split[1];
+
+                    updateDisplay(Number(display_mode));
+                    updateBrightness(brightness);
+                }
+            };
+            xhttp.onerror = function () {
+                console.log("error!@#!@#!@");
+            };
+        
+            xhttp.open("GET", "http://192.168.0.6/get_settings", true);
+            xhttp.send();
+        }
+
+        function onClickSetDisplayMode(){
+            let displayMode = 0;
+            for(let i=0; i<displayRadios.length; i++){
+                if(displayRadios[i].checked === true){
+                    displayMode = displayRadios[i].value;
+                    break;
+                }
+            }
+
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    // Typical action to be performed when the document is ready:
+                    console.log(xhttp.responseText);
+                    if(xhttp.responseText==="SUCCESS"){
+                        updateDisplay(Number(displayMode));
+                    }
+                }
+            };
+            xhttp.onerror = function () {
+                console.log("error!@#!@#!@");
+            };
+        
+            xhttp.open("GET", `http://192.168.0.6/set_display_mode?mode=${displayMode}`, true);
+            xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            xhttp.send();
+        }
+
+        function onClickSetBrightness(){
+            const value = slider.value;
+
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function() {
+                if (this.readyState == 4 && this.status == 200) {
+                    // Typical action to be performed when the document is ready:
+                    console.log(xhttp.responseText);
+                    if(xhttp.responseText === "SUCCESS"){
+                        updateBrightness(value);
+                    }
+                }
+            };
+            xhttp.onerror = function () {
+                console.log("error!@#!@#!@");
+            };
+        
+            xhttp.open("GET", `http://192.168.0.6/set_brightness?brightness=${value}`, true);
+            xhttp.setRequestHeader('Content-type', 'application/x-www-form-urlencoded');
+            xhttp.send();
+        }
+
+
+        function updateDisplay(mode){
+            if(mode === 0){
+                displayRadios[0].checked = true;
+                displayMode.innerText = "기본";
+            }
+            else{
+                displayRadios[1].checked = true;
+                displayMode.innerText = "페이드";
+            }
+        }
+
+        function updateBrightness(value){
+            slider.value = value;
+            brightness.innerText = value;
+            slideValue.innerText = value.toString() + "%";
+        }
+
+        function changeSlideValue(value){
+            slideValue.innerText = value.toString() + "%";
+        }
+    </script>
+</body>
+</html>
