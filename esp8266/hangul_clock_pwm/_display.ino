@@ -139,6 +139,10 @@ void updateDisplay(){
   int minute10 = minute / 10;
   int minute1 = minute % 10;
   int second=getSecondsFromNtp();
+
+  Serial.print(hour);
+  Serial.print(":");
+  Serial.println(minute);
   
   copyDisplay();
   clearDisplay();

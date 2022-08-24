@@ -9,10 +9,7 @@ void setup() {
   delay(1000);
   Serial.begin(115200);
   
-  //test();
-  wifiConnect();  
-  ntpConnect();
-  displayInit();
+  mainSetup();
 }
 
 void loop() {
