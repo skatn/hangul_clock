@@ -1,10 +1,13 @@
 #include <ESP8266WebServer.h>
 #include <ESP8266mDNS.h>
-#include <AutoConnect.h>
+#include <WiFiManager.h>
+
+const char* autoConnectName = "한글시계 WiFi설정";
+const char* autoConnectPw = "1234567890";
+const char* ssidAP = "한글시계 설정";
+const char* passwordAP = "1234567890";
 
 ESP8266WebServer Server;
-AutoConnect Portal(Server);
-AutoConnectConfig config;
 
 void serverInit(ESP8266WebServer& Server_);
 
@@ -14,19 +17,22 @@ void rootPage(){
 }
 
 void wifiConnect(){
-  Serial.println("wifiConnect..");
-  serverInit(Server);
-
-//  config.apip = 0x011CD9AC;
-  config.preserveAPMode = true;
-//  config.autoRise = false;
-//  config.immediateStart = true;
+  WiFi.mode(WIFI_AP_STA);
+  WiFi.softAP(ssidAP, passwordAP);
   
-  Portal.config(config);  
-  Portal.begin();
-  Serial.println("Web server started: " + WiFi.localIP().toString());
+  WiFiManager wifiManager;
+  wifiManager.setWiFiAutoReconnect(true);
+  wifiManager.autoConnect(autoConnectName, autoConnectPw);
+
+  if(!MDNS.begin("hgclock")){
+    Serial.println("Error setting up MDNS responder!");
+  }
+
+  serverInit(Server);
+  Server.begin();
 }
 
+
 void handleClient(){
-  Portal.handleClient();
+  Server.handleClient();
 }

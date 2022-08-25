@@ -1,5 +1,10 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
+#include <EEPROM.h>
+
+#define EEPROM_SIZE 4
+#define TIMEZONE_ADDRESS 0
+#define GMT2SEC(x) (x*3600)
 
 #define NTP_UPDATE_INTERVAL  3600000 //60m*60s*1000ms
 #define TIME_CHANGE_NULL    0
@@ -7,13 +12,30 @@
 #define TIME_CHANGE_MINUTE  2
 
 int rawTime = 0, currTime = 0;
-long timeOffset = 32400;
+char currentGmt = 9;    //GMT+9 한국시간
 
 WiFiUDP udp;
-NTPClient timeClient(udp, "kr.pool.ntp.org", timeOffset, NTP_UPDATE_INTERVAL);
+NTPClient timeClient(udp, "kr.pool.ntp.org", GMT2SEC(currentGmt), NTP_UPDATE_INTERVAL);
 
-void ntpConnect(){
+void ntpInit(){
+  EEPROM.begin(EEPROM_SIZE);
+  int gmt = EEPROM.read(TIMEZONE_ADDRESS);
+  setGmt(gmt);
+  
   timeClient.begin();
+}
+
+void setGmt(int gmt){
+  if(gmt < -11 || gmt > 12) gmt = 9;
+  currentGmt = gmt;
+  timeClient.setTimeOffset(GMT2SEC(gmt));
+  
+  EEPROM.write(TIMEZONE_ADDRESS, (char)gmt);
+  EEPROM.commit();
+}
+
+byte getGmt(){
+  return currentGmt;
 }
 
 byte getTimeChangeState(){

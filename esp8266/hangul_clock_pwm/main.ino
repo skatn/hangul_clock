@@ -1,6 +1,6 @@
 void mainSetup(){
   wifiConnect();  
-  ntpConnect();
+  ntpInit();
   displayInit();
 }
 
