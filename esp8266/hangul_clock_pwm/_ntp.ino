@@ -1,9 +1,6 @@
 #include <NTPClient.h>
 #include <WiFiUdp.h>
-#include <EEPROM.h>
 
-#define EEPROM_SIZE 4
-#define TIMEZONE_ADDRESS 0
 #define GMT2SEC(x) (x*3600)
 
 #define NTP_UPDATE_INTERVAL  3600000 //60m*60s*1000ms
@@ -18,8 +15,7 @@ WiFiUDP udp;
 NTPClient timeClient(udp, "kr.pool.ntp.org", GMT2SEC(currentGmt), NTP_UPDATE_INTERVAL);
 
 void ntpInit(){
-  EEPROM.begin(EEPROM_SIZE);
-  int gmt = EEPROM.read(TIMEZONE_ADDRESS);
+  int gmt = EEPROM.read(EEPROM_ADDR_TIMEZONE);
   setGmt(gmt);
   
   timeClient.begin();
@@ -30,7 +26,7 @@ void setGmt(int gmt){
   currentGmt = gmt;
   timeClient.setTimeOffset(GMT2SEC(gmt));
   
-  EEPROM.write(TIMEZONE_ADDRESS, (char)gmt);
+  EEPROM.write(EEPROM_ADDR_TIMEZONE, (char)gmt);
   EEPROM.commit();
 }
 

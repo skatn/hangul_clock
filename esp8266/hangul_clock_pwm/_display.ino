@@ -1,12 +1,6 @@
 #include <EEPROM.h>
 #include <Wire.h>
 
-#define DISPLAY_TYPE_HORIZONTAL
-
-#define EEPROM_SIZE 512
-#define EEPROM_ADDR_DISPLAYMODE 0
-#define EEPROM_ADDR_BRIGHTNESS  1
-
 #define DISPLAY_MODE_STANDARD 0
 #define DISPLAY_MODE_FADE     1
 #define DISPLAY_MODE_COUNT    2
@@ -39,8 +33,6 @@ byte brightness = 50;    //0~100
 byte displayMode = DISPLAY_MODE_STANDARD;
 
 void displayInit(){
-  EEPROM.begin(512);
-  
   i2cInit();
   readSettings();
 }
