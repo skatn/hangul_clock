@@ -181,12 +181,10 @@ void updateDisplay(){
 }
 
 void fade(){
-  int animBrightness;
-  for(float t=1; t>=0; t-=0.01){
-    animBrightness = t*brightness;
+  for(int b=brightness; b>=0; b-=1){
     for(byte y=0; y<CELL_SIZE; y++)for(byte x=0; x<CELL_SIZE; x++){ 
       if(lastDisplay[y][x]){
-        setLedCell(y, x, animBrightness);
+        setLedCell(y, x, b);
       }
       else{
         setLedCell(y, x, 0);
@@ -196,14 +194,13 @@ void fade(){
     delay(10);
   }
   
-  for(float t=0; t<1.009; t+=0.01){
-    animBrightness = t*brightness;
+  for(float b=0; b<brightness; b+=1){
     for(byte y=0; y<CELL_SIZE; y++)for(byte x=0; x<CELL_SIZE; x++){ 
       if(display[y][x]){
-        setLedCell(y, x, animBrightness);
+        setLedCell(y, x, b);
       }
       else{
-        setLedCell(y, x, 0);
+        setLedCell(y, x, 0); 
       }
     }
     sendI2C(0x25, 0);   //update setting

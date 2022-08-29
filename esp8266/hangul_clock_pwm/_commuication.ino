@@ -1,56 +1,61 @@
 #include "html.h"
 
-void serverInit(ESP8266WebServer& Server_){
-  static ESP8266WebServer& Server = Server_;
+void myResponse(AsyncWebServerRequest* request, int code, String contentType, String content);
+
+void myResponse(AsyncWebServerRequest* request, int code, String contentType, String content){
+  AsyncWebServerResponse *response_ = request->beginResponse(code, contentType, content);
+  response_->addHeader(F("Access-Control-Allow-Origin"), F("*"));
+  request->send(response_);
+}
+
+void serverInit(AsyncWebServer& server_){
+  static AsyncWebServer& server = server_;
   
-  Server.on("/", [](){
+  server.on("/", [](AsyncWebServerRequest* request){
     Serial.println("/");
-    Server.send(200, "text/html", index_html);
+    request->send_P(200, "text/html", index_html);
   });
 
-  Server.on("/get_settings", [](){
+  server.on("/get_settings", [](AsyncWebServerRequest* request){
     Serial.println("/get_settings");
     String message = String(getDisplayMode());
     message += "," + String(getBrightness());
     message += "," + String(getGmt());
-    Server.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
-    Server.send(200, "text/plain", message);
+
+    myResponse(request, 200, "text/plain", message);
   });
 
-  Server.on("/set_display_mode", [](){
+  server.on("/set_display_mode", [](AsyncWebServerRequest* request){
     Serial.println("/set_display_mode");
-    if(Server.hasArg("mode") == false){
-        Server.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
-      Server.send(200, "text/plain", "ERR_REQUEST");
+    if(request->hasParam("mode") == false){
+      myResponse(request, 200, "text/plain", "ERR_REQUEST");
       return;
     }
-    setDisplayMode(Server.arg("mode").toInt());
-    
-    Server.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
-    Server.send(200, "text/plain", "SUCCESS");
+    setDisplayMode(request->getParam("mode")->value().toInt());
+    myResponse(request, 200, "text/plain", "SUCCESS");
   });
   
-  Server.on("/set_brightness", [](){
+  server.on("/set_brightness", [](AsyncWebServerRequest* request){
     Serial.println("/set_brightness");
-    if(Server.hasArg("brightness") == false){
-    Server.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
-      Server.send(200, "text/plain", "ERR_REQUEST");
+    if(request->hasParam("brightness") == false){
+      myResponse(request, 200, "text/plain", "ERR_REQUEST");
       return;
     }
-    setBrightness(Server.arg("brightness").toInt());
-    Server.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
-    Server.send(200, "text/plain", "SUCCESS");
+    setBrightness(request->getParam("brightness")->value().toInt());
+    myResponse(request, 200, "text/plain", "SUCCESS");
   });
   
-  Server.on("/set_gmt", [](){
+  server.on("/set_gmt", [](AsyncWebServerRequest* request){
     Serial.println("/set_gmt");
-    if(Server.hasArg("gmt") == false){
-    Server.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
-      Server.send(200, "text/plain", "ERR_REQUEST");
+    if(request->hasParam("gmt") == false){
+      myResponse(request, 200, "text/plain", "ERR_REQUEST");
       return;
     }
-    setGmt(Server.arg("gmt").toInt());
-    Server.sendHeader(F("Access-Control-Allow-Origin"), F("*"));
-    Server.send(200, "text/plain", "SUCCESS");
+    setGmt(request->getParam("gmt")->value().toInt());
+    myResponse(request, 200, "text/plain", "SUCCESS");
+  });
+
+  server.onNotFound([](AsyncWebServerRequest* request){
+    request->send(404, "text/plain", "404 Not found");
   });
 }
