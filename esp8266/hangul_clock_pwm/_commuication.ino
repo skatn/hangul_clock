@@ -21,6 +21,7 @@ void serverInit(AsyncWebServer& server_){
     String message = String(getDisplayMode());
     message += "," + String(getBrightness());
     message += "," + String(getGmt());
+    message += "," + String(getTestMode());
 
     myResponse(request, 200, "text/plain", message);
   });
@@ -52,6 +53,17 @@ void serverInit(AsyncWebServer& server_){
       return;
     }
     setGmt(request->getParam("gmt")->value().toInt());
+    myResponse(request, 200, "text/plain", "SUCCESS");
+  });
+
+  server.on("/set_test_mode", [](AsyncWebServerRequest* request){
+    Serial.println("/set_test_mode");
+    if(request->hasParam("mode") == false){
+      myResponse(request, 200, "text/plain", "ERR_REQUEST");
+      return;
+    }
+    bool mode = request->getParam("mode")->value().toInt() ? true : false;
+    setTestMode(mode);
     myResponse(request, 200, "text/plain", "SUCCESS");
   });
 

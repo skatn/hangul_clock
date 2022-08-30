@@ -9,7 +9,6 @@ const char index_html[] PROGMEM = R"rawliteral(
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hangul Clock</title>
-    <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous"> -->
     <style>
         
         :root {
@@ -349,11 +348,11 @@ const char index_html[] PROGMEM = R"rawliteral(
             <br>
             <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="display_mode" value="0" id="display_standard">
-                <label class="form-check-label" for="display_standard" >기본</label>
+                <label class="form-check-label" for="display_standard">기본</label>
             </div>
             <div class="form-check form-check-inline">
                 <input class="form-check-input" type="radio" name="display_mode" value="1" id="display_fade">
-                <label class="form-check-label" for="display_fade">페이드
+                <label class="form-check-label" for="display_fade">페이드</label>
             </div>
             <button class="btn btn-primary" onclick="onClickSetDisplayMode();" custom-type="setting">
                 적용
@@ -393,8 +392,23 @@ const char index_html[] PROGMEM = R"rawliteral(
                     적용
                 </button>
             </div>
-            
-            
+        </section>
+
+        <section class="shadow-sm p-3 mb-3 bg-body rounded">
+            <h4>불량셀 검증  모드</h4>
+            <span>현재 설정 모드 : </span><span id="test_mode">-</span>
+            <br>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="test_mode" value="1" id="test_on">
+                <label class="form-check-label" for="test_on" >ON</label>
+            </div>
+            <div class="form-check form-check-inline">
+                <input class="form-check-input" type="radio" name="test_mode" value="0" id="test_off">
+                <label class="form-check-label" for="test_off">OFF</label>
+            </div>
+            <button class="btn btn-primary" onclick="onClickSetTestMode();" custom-type="setting">
+                적용
+            </button>
         </section>
         
         <button class="btn btn-primary" onclick="onClickGetSettings();" custom-type="setting">
@@ -410,10 +424,13 @@ const char index_html[] PROGMEM = R"rawliteral(
         const displayRadios = document.getElementsByName("display_mode");
         const gmtLabel = document.getElementById("gmt-label");
         const gmtValue = document.getElementById("gmt-value");
+        const testMode = document.getElementById("test_mode");
+        const testRadios = document.getElementsByName("test_mode");
 
 
 
         const server = `http://${window.location.host}`;
+        // const server = `http://192.168.200.101`;
 
         function onClickGetSettings(){
             request(`${server}/get_settings`)
@@ -423,10 +440,12 @@ const char index_html[] PROGMEM = R"rawliteral(
                 const display_mode = split[0];
                 const brightness = split[1];
                 const gmt = split[2];
+                const testMode = split[3];
 
                 updateDisplay(Number(display_mode));
                 updateBrightness(brightness);
                 updateGmtLabel(gmt);
+                updateTestMode(Number(testMode));
             })
             .catch((error)=>{
                 console.log(error);
@@ -495,6 +514,32 @@ const char index_html[] PROGMEM = R"rawliteral(
             });
         }
 
+        function onClickSetTestMode(){
+            let testMode;
+            for(let i=0; i<testRadios.length; i++){
+                if(testRadios[i].checked === true){
+                    testMode = testRadios[i].value;
+                    break;
+                }
+            }
+
+            if(testMode === undefined){
+                alert("모드를 선택해 주세요");
+                return;
+            }
+
+            request(`${server}/set_test_mode?mode=${testMode}`)
+            .then((result)=>{
+                if(result==="SUCCESS"){
+                    updateTestMode(Number(testMode));
+                }
+            })
+            .catch((error)=>{
+                console.log(error);
+                alert("불량셀 검증 모드 설정에 실패하였습니다.");
+            });
+        }
+
         function onClickSliderUp(){
             slider.value = parseInt(slider.value) + 1;
             changeSlideValue(slider.value);
@@ -538,10 +583,16 @@ const char index_html[] PROGMEM = R"rawliteral(
                 var xhttp = new XMLHttpRequest();
                 
                 xhttp.onreadystatechange = function() {
-                    if (this.readyState == 4 && this.status == 200) {
-                        console.log(xhttp.responseText);
-                        resolve(xhttp.responseText);
-                        loadingEnd();
+                    if (this.readyState == 4) {
+                        if(this.status == 200){
+                            console.log(xhttp.responseText);
+                            resolve(xhttp.responseText);
+                            loadingEnd();
+                        }
+                        else{
+                            reject(xhttp.responseText);
+                            loadingEnd();
+                        }
                     }
                 };
                 xhttp.onerror = function () {
@@ -573,15 +624,26 @@ const char index_html[] PROGMEM = R"rawliteral(
             slideValue.innerText = value.toString() + "%";
         }
 
+        function changeSlideValue(value){
+            slideValue.innerText = value.toString() + "%";
+        }
+
         function updateGmtLabel(gmt){
             gmtLabel.innerText = gmt;
         }
 
-        function changeSlideValue(value){
-            slideValue.innerText = value.toString() + "%";
+        function updateTestMode(mode){
+            if(mode === 1){
+                testRadios[0].checked = true;
+                testMode.innerText = "ON";
+            }
+            else{
+                testRadios[1].checked = true;
+                testMode.innerText = "OFF";
+            }
         }
+
     </script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ka7Sk0Gln4gmtz2MlQnikT1wXgYsOg+OMhuP+IlRH9sENBO0LRn5q+8nbTov4+1p" crossorigin="anonymous"></script>
 </body>
 </html>
 )rawliteral";

@@ -31,6 +31,8 @@ byte PWM_Gamma64[GAMMA_MAX]={
 };
 byte brightness = 50;    //0~100
 byte displayMode = DISPLAY_MODE_STANDARD;
+bool isTestMode = false;
+
 
 void displayInit(){
   i2cInit();
@@ -118,7 +120,7 @@ void showDisplay(){
         setLedCell(y, x, brightness);
       }
       else{
-        setLedCell(y, x, 0);
+        setLedCell(y, x, isTestMode ? 1 : 0);
       }
     }
   }
@@ -218,4 +220,12 @@ int getDisplayMode(){
 
 int getBrightness(){
   return brightness;
+}
+
+void setTestMode(bool mode){
+  isTestMode = mode;
+}
+
+bool getTestMode(){
+  return isTestMode;
 }

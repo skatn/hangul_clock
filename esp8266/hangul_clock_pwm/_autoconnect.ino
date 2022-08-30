@@ -14,12 +14,12 @@ DNSServer dns;
 void serverInit(AsyncWebServer& server_);
 
 void wifiConnect(){
-  WiFi.mode(WIFI_AP_STA);
-  WiFi.softAP(ssidAP, passwordAP);
+//  WiFi.mode(WIFI_AP_STA);
+//  WiFi.softAP(ssidAP, passwordAP);
   
   AsyncWiFiManager wifiManager(&server, &dns);
-//  wifiManager.setWiFiAutoReconnect(true);
   wifiManager.autoConnect(autoConnectName, autoConnectPw);
+  WiFi.softAP(ssidAP, passwordAP);
 
   if(!MDNS.begin("hgclock")){
     Serial.println("Error setting up MDNS responder!");
