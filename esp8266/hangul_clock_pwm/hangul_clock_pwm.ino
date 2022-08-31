@@ -16,7 +16,7 @@ void setup() {
   Serial.begin(115200);
   EEPROM.begin(EEPROM_SIZE);
   
-//  test();
+  test();
   mainSetup();
 }
 

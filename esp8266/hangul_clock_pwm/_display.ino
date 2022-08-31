@@ -7,7 +7,7 @@
 
 #define CELL_SIZE 6
 #define GAMMA_MAX 64
-//#define USE_GAMMA
+#define USE_GAMMA
 
 bool display[CELL_SIZE][CELL_SIZE];
 bool lastDisplay[CELL_SIZE][CELL_SIZE];
@@ -99,13 +99,16 @@ void setDisplay(byte y, byte x){
 }
 
 void setLedCell(byte y, byte x, byte brightness){
+  if(brightness > 100) brightness = 100;
+  else if(brightness < 0) brightness = 0;
+
   if(brightness == 0)
     sendI2C(pwmAddress[y][x]+0x25, 0);            //led register
   else 
     sendI2C(pwmAddress[y][x]+0x25, 1);
     
 #if defined(USE_GAMMA)
-  int gamma = brightness/100.0 * (GAMMA_MAX-1);
+  int gamma = map(brightness, 0, 100, 0, GAMMA_MAX-1);
   sendI2C(pwmAddress[y][x], PWM_Gamma64[gamma]);     //pwm register
 #else
   int value = brightness/100.0 * 255;
@@ -199,18 +202,6 @@ void fade(){
     }
     sendI2C(0x25, 0);   //update setting
     delay(10);
-  }
-}
-
-void test(){
-  i2cInit();
-  for(int i=0; i<CELL_SIZE; i++){
-    for(int j=0; j<CELL_SIZE; j++){
-      setLedCell(i, j, 1);
-      sendI2C(0x25, 0);   //update setting
-    }
-  }
-  while(true){
   }
 }
 
