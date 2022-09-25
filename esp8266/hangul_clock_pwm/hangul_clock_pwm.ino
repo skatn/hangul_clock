@@ -5,6 +5,7 @@
 #define EEPROM_ADDR_DISPLAYMODE 0
 #define EEPROM_ADDR_BRIGHTNESS  1
 #define EEPROM_ADDR_TIMEZONE    2
+#define EEPROM_ADDR_AUTO_BRIGHTNESS 3
 
 #define LOOP_TIME 8
 unsigned long lastMillis = 0;
@@ -16,7 +17,7 @@ void setup() {
   Serial.begin(115200);
   EEPROM.begin(EEPROM_SIZE);
   
-  test();
+//  test();
   mainSetup();
 }
 

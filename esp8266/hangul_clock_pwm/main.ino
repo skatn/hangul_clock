@@ -5,9 +5,23 @@ void mainSetup(){
 }
 
 void mainLoop(){
+  static int targetBrightness = 0;
   byte timeChangeState = getTimeChangeState();
-  if(timeChangeState == TIME_CHANGE_NULL) return;
+  if(timeChangeState == TIME_CHANGE_NULL && getAutoBrightness() == false) return;
+
+  
   updateDisplay();
+  if(getAutoBrightness()){
+    targetBrightness = map(getCdsValue(), getCdsMin(), getCdsMax(), 1, 100);
+//    Serial.println(targetBrightness);
+    int b = getActiveBrightness();
+    if(b < targetBrightness) setActiveBrightness(b+1);
+    else if(b > targetBrightness) setActiveBrightness(b-1);
+  }
+  else{
+    setActiveBrightness(getBrightness());
+  }
+  
 
   switch(displayMode){
     case DISPLAY_MODE_STANDARD:

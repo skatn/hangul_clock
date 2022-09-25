@@ -333,6 +333,12 @@ const char index_html[] PROGMEM = R"rawliteral(
         .mb-3 {
             margin-bottom: 1rem !important;
         }
+        .ms-1 {
+            margin-left: 0.25rem !important;
+        }
+        .ms-2 {
+            margin-left: 0.5rem !important;
+        }
         .ms-3 {
             margin-left: 1rem !important;
         }
@@ -360,24 +366,36 @@ const char index_html[] PROGMEM = R"rawliteral(
         </section>
     
         <section class="shadow-sm p-3 mb-3 bg-body rounded">
-            <h4>밝기</h4>
+            <h4>밝기 설정</h4>
             <span>현재 설정 값 : </span><span id="brightness">-%</span>
             <br>
         
-            <input type="range" id="slider" value="0" min="0" max="100" oninput="changeSlideValue(this.value)">
-            <span id="slide_value">0%</span>
             
-            <button class="btn btn-primary" onclick="onClickSliderDown();">
-                -
-            </button>
-            <button class="btn btn-primary" onclick="onClickSliderUp();">
-                +
-            </button>
-        
-            
-            <button class="btn btn-primary ms-3" onclick="onClickSetBrightness();" custom-type="setting">
-                적용
-            </button>
+            <div class="row align-items-center mb-3">
+                <input type="range" id="slider" value="0" min="0" max="100" oninput="changeSlideValue(this.value)">
+                <span id="slide_value">0%</span>
+                
+                <button class="btn btn-primary =" onclick="onClickSliderDown();">
+                    -
+                </button>
+                <button class="btn btn-primary ms-1" onclick="onClickSliderUp();">
+                    +
+                </button>
+                
+                <button class="btn btn-primary ms-3" onclick="onClickSetBrightness();" custom-type="setting">
+                    적용
+                </button>
+            </div>
+
+            <span>자동 밝기 : </span><span id="auto_brightness">-</span>
+            <div class="row align-items-center ms-1 mb-3">
+                <button class="btn btn-primary =" onclick="onClickAutoBrightnessOn();" custom-type="setting">
+                    ON
+                </button>
+                <button class="btn btn-primary ms-1" onclick="onClickAutoBrightnessOff();" custom-type="setting">
+                    OFF 
+                </button>
+            </div>
         </section>
 
         <section class="shadow-sm p-3 mb-3 bg-body rounded">
@@ -430,7 +448,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 
 
         const server = `http://${window.location.host}`;
-        // const server = `http://192.168.200.101`;
+        // const server = "http://192.168.200.103";
 
         function onClickGetSettings(){
             request(`${server}/get_settings`)
@@ -441,11 +459,13 @@ const char index_html[] PROGMEM = R"rawliteral(
                 const brightness = split[1];
                 const gmt = split[2];
                 const testMode = split[3];
+                const autoBrightness = split[4];
 
                 updateDisplay(Number(display_mode));
                 updateBrightness(brightness);
                 updateGmtLabel(gmt);
                 updateTestMode(Number(testMode));
+                updateAutoBrightness(Number(autoBrightness));
             })
             .catch((error)=>{
                 console.log(error);
@@ -491,6 +511,32 @@ const char index_html[] PROGMEM = R"rawliteral(
                 console.log(error);
                 alert("밝기 설정에 실패하였습니다.");
             });
+        }
+
+        function onClickAutoBrightnessOn(){
+            request(`${server}/set_auto_brightness?mode=1`)
+            .then((result)=>{
+                if(result=="SUCCESS"){
+                    updateAutoBrightness(1);
+                }
+            })
+            .catch((error)=>{
+                console.log(error);
+                alert("자동 밝기 설정에 실패하였습니다.")
+            })
+        }
+
+        function onClickAutoBrightnessOff(){
+            request(`${server}/set_auto_brightness?mode=0`)
+            .then((result)=>{
+                if(result=="SUCCESS"){
+                    updateAutoBrightness(0);
+                }
+            })
+            .catch((error)=>{
+                console.log(error);
+                alert("자동 밝기 설정에 실패하였습니다.")
+            })
         }
         
         function onClickGMT(){
@@ -622,6 +668,11 @@ const char index_html[] PROGMEM = R"rawliteral(
             slider.value = value;
             brightness.innerText = value;
             slideValue.innerText = value.toString() + "%";
+        }
+
+        function updateAutoBrightness(mode){
+            const autoBrightness = document.getElementById("auto_brightness");
+            autoBrightness.innerText = mode === 1 ? "ON" : "OFF";
         }
 
         function changeSlideValue(value){

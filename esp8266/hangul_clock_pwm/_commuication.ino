@@ -22,6 +22,7 @@ void serverInit(AsyncWebServer& server_){
     message += "," + String(getBrightness());
     message += "," + String(getGmt());
     message += "," + String(getTestMode());
+    message += "," + String(getAutoBrightness());
 
     myResponse(request, 200, "text/plain", message);
   });
@@ -43,6 +44,16 @@ void serverInit(AsyncWebServer& server_){
       return;
     }
     setBrightness(request->getParam("brightness")->value().toInt());
+    myResponse(request, 200, "text/plain", "SUCCESS");
+  });
+  
+  server.on("/set_auto_brightness", [](AsyncWebServerRequest* request){
+    Serial.println("/set_auto_brightness");
+    if(request->hasParam("mode") == false){
+      myResponse(request, 200, "text/plain", "ERR_REQUEST");
+      return;
+    }
+    setAutoBrightness(request->getParam("mode")->value().toInt() ? true : false);
     myResponse(request, 200, "text/plain", "SUCCESS");
   });
   

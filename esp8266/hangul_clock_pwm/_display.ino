@@ -30,8 +30,10 @@ byte PWM_Gamma64[GAMMA_MAX]={
   0xe1,0xe9,0xed,0xf1,0xf6,0xfa,0xfe,0xff
 };
 byte brightness = 50;    //0~100
+byte activeBrightness = brightness;
 byte displayMode = DISPLAY_MODE_STANDARD;
 bool isTestMode = false;
+bool isOnAutoBrightness = false;
 
 
 void displayInit(){
@@ -42,24 +44,12 @@ void displayInit(){
 void readSettings(){
   displayMode = EEPROM.read(EEPROM_ADDR_DISPLAYMODE);
   brightness = EEPROM.read(EEPROM_ADDR_BRIGHTNESS);
+  isOnAutoBrightness = (bool)EEPROM.read(EEPROM_ADDR_AUTO_BRIGHTNESS);
   
   if(displayMode >= DISPLAY_MODE_COUNT) setDisplayMode(DISPLAY_MODE_STANDARD);
   if(brightness >= 100) setBrightness(100);
 }
 
-void setBrightness(int value){
-  if(value < 0) value = 0;
-  else if(value > 100) value = 100;
-  brightness = value;
-  EEPROM.write(EEPROM_ADDR_BRIGHTNESS, brightness);
-  EEPROM.commit();
-}
-
-void setDisplayMode(int value){
-  displayMode = value;
-  EEPROM.write(EEPROM_ADDR_DISPLAYMODE, value);
-  EEPROM.commit();
-}
 
 void i2cInit(){
   Wire.begin(4, 5);
@@ -120,7 +110,7 @@ void showDisplay(){
   for(byte y=0; y<CELL_SIZE; y++){
     for(byte x=0; x<CELL_SIZE; x++){
       if(display[y][x]){
-        setLedCell(y, x, brightness);
+        setLedCell(y, x, activeBrightness);
       }
       else{
         setLedCell(y, x, isTestMode ? 1 : 0);
@@ -178,7 +168,7 @@ void updateDisplay(){
 }
 
 void fade(){
-  for(int b=brightness; b>=0; b-=1){
+  for(int b=activeBrightness; b>=0; b-=1){
     for(byte y=0; y<CELL_SIZE; y++)for(byte x=0; x<CELL_SIZE; x++){ 
       if(lastDisplay[y][x]){
         setLedCell(y, x, b);
@@ -191,7 +181,7 @@ void fade(){
     delay(10);
   }
   
-  for(float b=0; b<brightness; b+=1){
+  for(float b=0; b<activeBrightness; b+=1){
     for(byte y=0; y<CELL_SIZE; y++)for(byte x=0; x<CELL_SIZE; x++){ 
       if(display[y][x]){
         setLedCell(y, x, b);
@@ -205,18 +195,55 @@ void fade(){
   }
 }
 
+
+
 int getDisplayMode(){
   return displayMode;
+}
+
+void setDisplayMode(int value){
+  displayMode = value;
+  EEPROM.write(EEPROM_ADDR_DISPLAYMODE, value);
+  EEPROM.commit();
 }
 
 int getBrightness(){
   return brightness;
 }
 
-void setTestMode(bool mode){
-  isTestMode = mode;
+void setBrightness(int value){
+  if(value < 0) value = 0;
+  else if(value > 100) value = 100;
+  brightness = value;
+  EEPROM.write(EEPROM_ADDR_BRIGHTNESS, brightness);
+  EEPROM.commit();
+}
+
+
+byte getActiveBrightness(){
+  return activeBrightness;
+}
+
+void setActiveBrightness(int value){
+  if(value < 0) value = 0;
+  else if(value > 100) value = 100;
+  activeBrightness = value;
 }
 
 bool getTestMode(){
   return isTestMode;
+}
+
+void setTestMode(bool mode){
+  isTestMode = mode;
+}
+
+void setAutoBrightness(bool mode){
+  isOnAutoBrightness = mode;
+  EEPROM.write(EEPROM_ADDR_AUTO_BRIGHTNESS, mode);
+  EEPROM.commit();
+}
+
+bool getAutoBrightness(){
+  return isOnAutoBrightness;
 }
